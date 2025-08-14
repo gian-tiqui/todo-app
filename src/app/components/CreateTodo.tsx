@@ -91,6 +91,7 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
         visible={visible}
         onHide={handleClose}
         footer={dialogFooter}
+        className="w-80 md:w-[500px]"
         unstyled
         modal
         pt={{

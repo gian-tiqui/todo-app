@@ -67,8 +67,7 @@ const SelectedTodo = () => {
         modal
         visible={isModalOpen}
         onHide={() => closeModal()}
-        className=""
-        style={{ width: "500px" }}
+        className="w-80 md:w-[500px]"
         unstyled
         pt={{
           header: {
@@ -83,7 +82,7 @@ const SelectedTodo = () => {
         header="Todo Details"
       >
         {selectedTodo && (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full">
             {/* Todo Info */}
             <div className="space-y-4">
               <div>
