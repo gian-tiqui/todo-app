@@ -1,47 +1,46 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { CreateTodo, EditTodo, Todo } from "../types/todo";
+import { Todo, CreateTodoData, UpdateTodoData } from "../types/todo";
+import { apiClient } from "../utils/http-common";
 
-const API_BASE = "/api/todos";
+export const API_BASE = String(process.env.NEXT_PUBLIC_API_URI);
 
-export const useTodos = () => {
+export const useTodos = (
+  offset: number = 0,
+  limit: number = 10,
+  search: string = ""
+) => {
   return useQuery({
-    queryKey: ["todos"],
+    queryKey: ["todos", offset, limit, "desc", search],
     queryFn: async (): Promise<Todo[]> => {
-      const response = await fetch(API_BASE);
-      if (!response.ok) {
-        throw new Error("Failed to fetch todos");
-      }
-      return response.json();
+      const response = await apiClient.get<Todo[]>(
+        `/?_start=${offset}&_limit=${limit}&q=${search}`
+      );
+      return response.data;
     },
   });
 };
 
-export const useCreateTodo = () => {
+export const useCreateTodo = (
+  offset: number = 0,
+  limit: number = 10,
+  search: string = ""
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateTodo): Promise<Todo> => {
-      const response = await fetch(API_BASE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create todo");
-      }
-
-      return response.json();
+    mutationFn: async (data: CreateTodoData): Promise<Todo> => {
+      const response = await apiClient.post<Todo>("/", data);
+      return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      toast.success("Todo created successfully!");
+    onSuccess: (newTodo) => {
+      queryClient.setQueryData<Todo[]>(
+        ["todos", offset, limit, "desc", search],
+        (old) =>
+          offset === 0 && !search ? (old ? [newTodo, ...old] : [newTodo]) : old
+      );
     },
-    onError: () => {
-      toast.error("Failed to create todo");
+    onError: (error) => {
+      console.error("❌ Error creating todo:", error);
     },
   });
 };
@@ -54,29 +53,48 @@ export const useUpdateTodo = () => {
       id,
       data,
     }: {
-      id: string;
-      data: EditTodo;
+      id: number;
+      data: UpdateTodoData;
     }): Promise<Todo> => {
-      const response = await fetch(`${API_BASE}/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      return { id, ...data } as Todo;
+    },
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
 
-      if (!response.ok) {
-        throw new Error("Failed to update todo");
+      const previousQueries: Array<{
+        queryKey: readonly unknown[];
+        data: Todo[];
+      }> = [];
+
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ["todos"] })
+        .forEach((query) => {
+          const oldData = query.state.data;
+          if (oldData) {
+            previousQueries.push({
+              queryKey: query.queryKey,
+              data: (oldData as Todo[]) ?? [],
+            });
+
+            queryClient.setQueryData<Todo[]>(
+              query.queryKey,
+              (old) =>
+                old?.map((todo) =>
+                  todo.id === id ? { ...todo, ...data } : todo
+                ) || []
+            );
+          }
+        });
+
+      return { previousQueries };
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      toast.success("Todo updated successfully!");
-    },
-    onError: () => {
-      toast.error("Failed to update todo");
     },
   });
 };
@@ -84,22 +102,49 @@ export const useUpdateTodo = () => {
 export const useDeleteTodo = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      const response = await fetch(`${API_BASE}/${id}`, {
-        method: "DELETE",
-      });
+  return useMutation<
+    number,
+    unknown,
+    number,
+    { previousQueries: Array<{ queryKey: readonly unknown[]; data: Todo[] }> }
+  >({
+    mutationFn: async (id: number): Promise<number> => {
+      return Promise.resolve(id);
+    },
+    onMutate: async (id: number) => {
+      await queryClient.cancelQueries({ queryKey: ["todos"] });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete todo");
+      const previousQueries: Array<{
+        queryKey: readonly unknown[];
+        data: Todo[];
+      }> = [];
+
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ["todos"] })
+        .forEach((query) => {
+          const oldData = query.state.data;
+          if (oldData) {
+            previousQueries.push({
+              queryKey: query.queryKey,
+              data: oldData as Todo[],
+            });
+
+            queryClient.setQueryData<Todo[]>(
+              query.queryKey,
+              (old) => old?.filter((todo) => todo.id !== id) || []
+            );
+          }
+        });
+
+      return { previousQueries };
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      toast.success("Todo deleted successfully!");
-    },
-    onError: () => {
-      toast.error("Failed to delete todo");
     },
   });
 };

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import QueryProvider from "./providers/QueryClientProvider";
+import "primereact/resources/themes/lara-light-blue/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+import { PrimeReactProvider } from "primereact/api";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +32,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <PrimeReactProvider value={{ unstyled: false, pt: {}, ripple: true }}>
+          <QueryProvider>{children}</QueryProvider>
+        </PrimeReactProvider>
       </body>
     </html>
   );

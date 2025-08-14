@@ -8,30 +8,23 @@ interface Props {
 const PageTemplate: React.FC<Props> = ({ children }) => {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-slate-900 via-gray-900 to-black">
-      {/* Animated floating gradient orbs - Todo App themed */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Large productivity-themed gradient orb */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
 
-        {/* Success/completion themed orb */}
         <div className="absolute top-1/4 -left-32 w-64 h-64 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse delay-1000"></div>
 
-        {/* Focus/priority orb */}
         <div className="absolute bottom-1/3 right-1/4 w-56 h-56 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-18 animate-pulse delay-2000"></div>
 
-        {/* Floating accent orb */}
         <div className="absolute top-1/3 right-1/3 w-32 h-32 bg-gradient-to-r from-indigo-400 to-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-25 animate-float"></div>
 
-        {/* Bottom left productivity accent */}
         <div className="absolute -bottom-32 -left-32 w-72 h-72 bg-gradient-to-r from-slate-600 to-gray-600 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse delay-500"></div>
 
-        {/* Additional small orbs for depth */}
         <div className="absolute top-3/4 left-1/4 w-40 h-40 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-12 animate-float delay-3000"></div>
 
         <div className="absolute top-1/2 right-1/6 w-24 h-24 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-1500"></div>
       </div>
 
-      {/* Subtle dot pattern overlay */}
       <div
         className="absolute inset-0 opacity-5 pointer-events-none"
         style={{
@@ -40,7 +33,6 @@ const PageTemplate: React.FC<Props> = ({ children }) => {
         }}
       ></div>
 
-      {/* Noise texture overlay for added depth */}
       <div
         className="absolute inset-0 opacity-[0.02] pointer-events-none bg-noise"
         style={{
@@ -48,7 +40,6 @@ const PageTemplate: React.FC<Props> = ({ children }) => {
         }}
       ></div>
 
-      {/* Content container with subtle backdrop blur for readability */}
       <div className="relative z-10 min-h-screen">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]"></div>
         <div className="relative z-10">{children}</div>

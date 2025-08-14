@@ -1,14 +1,18 @@
-type Todo = {
+export interface Todo {
   userId: number;
   id: number;
   title: string;
-  completed: boolean;
-};
+  completed?: boolean;
+}
 
-type CreateTodo = {
+export interface CreateTodoData {
+  userId: number;
   title: string;
-};
+  completed?: boolean;
+}
 
-type EditTodo = { title?: string; completed?: boolean };
-
-export type { Todo, CreateTodo, EditTodo };
+export interface UpdateTodoData {
+  title?: string;
+  completed?: boolean;
+  userId?: number;
+}
