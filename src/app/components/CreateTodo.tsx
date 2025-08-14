@@ -63,7 +63,7 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
   };
 
   const dialogFooter = (
-    <div className="flex justify-end gap-2">
+    <div className="bg-white/10 backdrop-blur-lg border gap-2 border-white/20 rounded-b-lg text-white flex justify-between p-4 cursor-pointer hover:bg-white/20 hover:border-white/30 transition-all duration-300 group">
       <Button
         label="Cancel"
         icon="pi pi-times"
@@ -90,13 +90,25 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
         header="Create New Todo"
         visible={visible}
         onHide={handleClose}
-        unstyled
         footer={dialogFooter}
-        style={{ width: "450px" }}
+        unstyled
         modal
+        pt={{
+          header: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 rounded-t-lg text-white flex justify-between p-4 cursor-pointer hover:bg-white/20 hover:border-white/30 transition-all duration-300 group",
+          },
+          content: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 text-white flex justify-between p-4 cursor-pointer hover:bg-white/20 hover:border-white/30 transition-all duration-300 group",
+          },
+        }}
         closable={!createTodoMutation.isPending}
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4 w-full"
+        >
           {/* Title Field */}
           <div className="field">
             <label
@@ -124,7 +136,8 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
                   {...field}
                   id="title"
                   placeholder="Enter todo title..."
-                  className={`w-full bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:border-blue-400 focus:bg-white/20 ${
+                  unstyled
+                  className={`w-full bg-white/10 border border-white/20  rounded-lg text-white placeholder-white/90 h-12 px-2  focus:border-blue-400 focus:bg-white/20 ${
                     errors.title ? "border-red-400" : ""
                   }`}
                   disabled={createTodoMutation.isPending}

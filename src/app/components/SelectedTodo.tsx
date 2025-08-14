@@ -69,8 +69,17 @@ const SelectedTodo = () => {
         onHide={() => closeModal()}
         className=""
         style={{ width: "500px" }}
-        contentClassName=""
-        headerClassName=""
+        unstyled
+        pt={{
+          header: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 rounded-t-lg text-white flex justify-between p-4 cursor-pointer hover:bg-white/20 hover:border-white/30 transition-all duration-300 group",
+          },
+          content: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 text-white flex justify-between p-4 cursor-pointer hover:bg-white/20 hover:border-white/30 transition-all duration-300 group",
+          },
+        }}
         header="Todo Details"
       >
         {selectedTodo && (
