@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Todo, CreateTodoData, UpdateTodoData } from "../types/todo";
 import { apiClient } from "../utils/http-common";
+import { useTodoStore } from "../store/todoStore";
 
 export const API_BASE = String(process.env.NEXT_PUBLIC_API_URI);
 
@@ -22,6 +23,7 @@ export const useTodos = (
 
 export const useCreateTodo = () => {
   const queryClient = useQueryClient();
+  const { accumulatedTodos, setAccumulatedTodos } = useTodoStore();
 
   return useMutation({
     mutationFn: async (data: CreateTodoData): Promise<Todo> => {
@@ -34,17 +36,15 @@ export const useCreateTodo = () => {
       };
     },
     onSuccess: (newTodo) => {
-      // Update the first page cache (start=0, limit=10, desc, no search)
       queryClient.setQueryData<Todo[]>(["todos", 0, 10, "desc", ""], (old) => {
-        console.log("Updating cache with new todo:", newTodo);
-        console.log("Previous todos:", old);
         return old ? [newTodo, ...old] : [newTodo];
       });
 
-      // Invalidate all todos queries to ensure consistency
+      setAccumulatedTodos([newTodo, ...accumulatedTodos]);
+
       queryClient.invalidateQueries({
         queryKey: ["todos"],
-        refetchType: "none", // Don't refetch, just mark as stale
+        refetchType: "none",
       });
     },
     onError: (error) => {

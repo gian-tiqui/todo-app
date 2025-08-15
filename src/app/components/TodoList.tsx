@@ -6,6 +6,7 @@ import SelectedTodo from "./SelectedTodo";
 import { Query } from "../types/query";
 import TodoItem from "./TodoItem";
 import CreateTodo from "./CreateTodo";
+import { useTodoStore } from "../store/todoStore";
 
 const TodoList = () => {
   const [query, setQuery] = useState<Query>({
@@ -18,19 +19,19 @@ const TodoList = () => {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
 
-  // Store accumulated todos
-  const [accumulatedTodos, setAccumulatedTodos] = useState<Todo[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  // Get store state and actions
+  const { accumulatedTodos, setAccumulatedTodos } = useTodoStore();
 
-  // Ref to track previous scroll position
+  // Ref to track previous scroll position and loading state
   const previousScrollPosition = useRef<number>(0);
   const isInfiniteLoading = useRef<boolean>(false);
+  const isInitialLoad = useRef<boolean>(true);
 
   useEffect(() => {
     const timeOut = setTimeout(() => {
       // Reset accumulated todos when searching
       setAccumulatedTodos([]);
-      setIsInitialLoad(true);
+      isInitialLoad.current = true;
       setQuery((prev) => ({
         ...prev,
         search: searchTerm,
@@ -42,7 +43,7 @@ const TodoList = () => {
     return () => {
       clearTimeout(timeOut);
     };
-  }, [searchTerm]);
+  }, [searchTerm, setAccumulatedTodos]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,7 +57,7 @@ const TodoList = () => {
       if (
         scrollTop + clientHeight >= scrollHeight - 100 &&
         !isLoadingMore &&
-        !isInitialLoad
+        !isInitialLoad.current
       ) {
         // Store current scroll position before loading more
         previousScrollPosition.current = scrollTop;
@@ -69,7 +70,7 @@ const TodoList = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [isLoadingMore, isInitialLoad]);
+  }, [isLoadingMore]);
 
   const handleLowerViewPortHit = () => {
     setIsLoadingMore(true);
@@ -96,18 +97,20 @@ const TodoList = () => {
   // Handle todo accumulation
   useEffect(() => {
     if (todos && Array.isArray(todos)) {
-      if (isInitialLoad) {
+      if (isInitialLoad.current) {
         // First load or search - replace all todos
         setAccumulatedTodos(todos);
-        setIsInitialLoad(false);
+        isInitialLoad.current = false;
       } else if (isLoadingMore) {
         // Infinite loading - append new todos
-        setAccumulatedTodos((prevTodos) => {
-          // Filter out duplicates by id to prevent duplicates
-          const existingIds = new Set(prevTodos.map((todo) => todo.id));
-          const newTodos = todos.filter((todo) => !existingIds.has(todo.id));
-          return [...prevTodos, ...newTodos];
-        });
+        const existingIds = new Set(
+          accumulatedTodos.map((todo: Todo) => todo.id)
+        );
+        const newTodos = todos.filter((todo) => !existingIds.has(todo.id));
+
+        if (newTodos.length > 0) {
+          setAccumulatedTodos([...accumulatedTodos, ...newTodos]);
+        }
 
         setIsLoadingMore(false);
 
@@ -132,10 +135,10 @@ const TodoList = () => {
         }
       }
     }
-  }, [todos, isInitialLoad, isLoadingMore]);
+  }, [todos, isLoadingMore, accumulatedTodos, setAccumulatedTodos]);
 
   // Show loading only on initial load
-  if (isLoadingTodos && isInitialLoad) {
+  if (isLoadingTodos && isInitialLoad.current) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg p-8 text-white">
@@ -194,7 +197,7 @@ const TodoList = () => {
             ))
           ) : (
             <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg p-8 text-center text-white/70">
-              {isInitialLoad && isLoadingTodos
+              {isInitialLoad.current && isLoadingTodos
                 ? "Loading..."
                 : "No todos found"}
             </div>
