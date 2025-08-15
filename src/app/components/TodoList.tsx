@@ -18,13 +18,25 @@ const TodoList = () => {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
 
+  // Store accumulated todos
+  const [accumulatedTodos, setAccumulatedTodos] = useState<Todo[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+
   // Ref to track previous scroll position
   const previousScrollPosition = useRef<number>(0);
   const isInfiniteLoading = useRef<boolean>(false);
 
   useEffect(() => {
     const timeOut = setTimeout(() => {
-      setQuery((prev) => ({ ...prev, search: searchTerm, limit: 10 })); // Reset limit when searching
+      // Reset accumulated todos when searching
+      setAccumulatedTodos([]);
+      setIsInitialLoad(true);
+      setQuery((prev) => ({
+        ...prev,
+        search: searchTerm,
+        start: 0,
+        limit: 10,
+      }));
     }, 2000);
 
     return () => {
@@ -41,7 +53,11 @@ const TodoList = () => {
       setShowBackToTop(scrollTop > 300);
 
       // Check if near bottom for infinite scroll
-      if (scrollTop + clientHeight >= scrollHeight - 100 && !isLoadingMore) {
+      if (
+        scrollTop + clientHeight >= scrollHeight - 100 &&
+        !isLoadingMore &&
+        !isInitialLoad
+      ) {
         // Store current scroll position before loading more
         previousScrollPosition.current = scrollTop;
         isInfiniteLoading.current = true;
@@ -53,13 +69,14 @@ const TodoList = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [isLoadingMore]);
+  }, [isLoadingMore, isInitialLoad]);
 
   const handleLowerViewPortHit = () => {
     setIsLoadingMore(true);
     setQuery((prev) => ({
       ...prev,
-      limit: prev.limit + 10,
+      start: accumulatedTodos.length, // Use current length as start point
+      limit: 10, // Load 10 more items
     }));
   };
 
@@ -76,57 +93,49 @@ const TodoList = () => {
     isError: isErrorTodos,
   } = useTodos(query.start, query.limit, query.search);
 
-  // Reset loading more state when data is received and maintain scroll position
+  // Handle todo accumulation
   useEffect(() => {
-    if (todos && isLoadingMore) {
-      setIsLoadingMore(false);
+    if (todos && Array.isArray(todos)) {
+      if (isInitialLoad) {
+        // First load or search - replace all todos
+        setAccumulatedTodos(todos);
+        setIsInitialLoad(false);
+      } else if (isLoadingMore) {
+        // Infinite loading - append new todos
+        setAccumulatedTodos((prevTodos) => {
+          // Filter out duplicates by id to prevent duplicates
+          const existingIds = new Set(prevTodos.map((todo) => todo.id));
+          const newTodos = todos.filter((todo) => !existingIds.has(todo.id));
+          return [...prevTodos, ...newTodos];
+        });
 
-      // Restore scroll position after infinite loading
-      if (isInfiniteLoading.current) {
-        // Use setTimeout to ensure DOM has updated
-        setTimeout(() => {
-          // Calculate new scroll position to maintain relative position
-          const currentScrollHeight = document.documentElement.scrollHeight;
-          const currentClientHeight = document.documentElement.clientHeight;
+        setIsLoadingMore(false);
 
-          // Scroll to a position that maintains the user's view
-          // We add a small offset to account for the new content
-          const targetScrollPosition = Math.min(
-            previousScrollPosition.current + 100, // Small offset to show some new content
-            currentScrollHeight - currentClientHeight
-          );
+        // Restore scroll position after infinite loading
+        if (isInfiniteLoading.current) {
+          setTimeout(() => {
+            const currentScrollHeight = document.documentElement.scrollHeight;
+            const currentClientHeight = document.documentElement.clientHeight;
 
-          window.scrollTo({
-            top: targetScrollPosition,
-            behavior: "auto", // Use "auto" to avoid smooth scrolling during infinite load
-          });
+            const targetScrollPosition = Math.min(
+              previousScrollPosition.current + 100,
+              currentScrollHeight - currentClientHeight
+            );
 
-          isInfiniteLoading.current = false;
-        }, 0);
+            window.scrollTo({
+              top: targetScrollPosition,
+              behavior: "auto",
+            });
+
+            isInfiniteLoading.current = false;
+          }, 0);
+        }
       }
     }
-  }, [todos, isLoadingMore]);
+  }, [todos, isInitialLoad, isLoadingMore]);
 
-  // Alternative approach: Prevent scroll reset on component re-render
-  useEffect(() => {
-    // Only run this effect if we're in the middle of infinite loading
-    if (isInfiniteLoading.current && !isLoadingMore) {
-      const restoreScrollPosition = () => {
-        if (previousScrollPosition.current > 0) {
-          window.scrollTo({
-            top: previousScrollPosition.current + 50, // Small offset to show new content
-            behavior: "auto",
-          });
-        }
-      };
-
-      // Use requestAnimationFrame to ensure DOM is fully rendered
-      requestAnimationFrame(restoreScrollPosition);
-    }
-  });
-
-  if (isLoadingTodos && query.limit === 10)
-    // Only show full loading on initial load
+  // Show loading only on initial load
+  if (isLoadingTodos && isInitialLoad) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg p-8 text-white">
@@ -137,8 +146,9 @@ const TodoList = () => {
         </div>
       </div>
     );
+  }
 
-  if (isErrorTodos)
+  if (isErrorTodos) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-red-500/10 backdrop-blur-lg border border-red-400/30 rounded-lg p-8 text-white max-w-md text-center">
@@ -147,9 +157,7 @@ const TodoList = () => {
         </div>
       </div>
     );
-
-  // Ensure todos is always an array before mapping
-  const todoList = Array.isArray(todos) ? todos : [];
+  }
 
   return (
     <div className="min-h-screen p-4 relative">
@@ -180,17 +188,21 @@ const TodoList = () => {
 
         {/* Todo List */}
         <div className="space-y-3 mb-8">
-          {todoList.length > 0 ? (
-            todoList.map((todo: Todo) => <TodoItem todo={todo} key={todo.id} />)
+          {accumulatedTodos.length > 0 ? (
+            accumulatedTodos.map((todo: Todo) => (
+              <TodoItem todo={todo} key={todo.id} />
+            ))
           ) : (
             <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg p-8 text-center text-white/70">
-              {todos === undefined ? "Loading..." : "No todos found"}
+              {isInitialLoad && isLoadingTodos
+                ? "Loading..."
+                : "No todos found"}
             </div>
           )}
         </div>
 
         {/* Loading More Indicator */}
-        {isLoadingMore && todoList.length > 0 && (
+        {isLoadingMore && accumulatedTodos.length > 0 && (
           <div className="flex items-center justify-center py-8">
             <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg p-4 text-white">
               <div className="flex items-center gap-3">

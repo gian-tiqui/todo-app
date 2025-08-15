@@ -20,11 +20,7 @@ export const useTodos = (
   });
 };
 
-export const useCreateTodo = (
-  offset: number = 0,
-  limit: number = 10,
-  search: string = ""
-) => {
+export const useCreateTodo = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -38,11 +34,18 @@ export const useCreateTodo = (
       };
     },
     onSuccess: (newTodo) => {
-      queryClient.setQueryData<Todo[]>(
-        ["todos", offset, limit, "desc", search],
-        (old) =>
-          offset === 0 && !search ? (old ? [newTodo, ...old] : [newTodo]) : old
-      );
+      // Update the first page cache (start=0, limit=10, desc, no search)
+      queryClient.setQueryData<Todo[]>(["todos", 0, 10, "desc", ""], (old) => {
+        console.log("Updating cache with new todo:", newTodo);
+        console.log("Previous todos:", old);
+        return old ? [newTodo, ...old] : [newTodo];
+      });
+
+      // Invalidate all todos queries to ensure consistency
+      queryClient.invalidateQueries({
+        queryKey: ["todos"],
+        refetchType: "none", // Don't refetch, just mark as stale
+      });
     },
     onError: (error) => {
       console.error("❌ Error creating todo:", error);
