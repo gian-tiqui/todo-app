@@ -17,8 +17,8 @@ const SelectedTodo = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [originalTitle, setOriginalTitle] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Initialize edit title when selectedTodo changes
   useEffect(() => {
     if (selectedTodo) {
       setEditTitle(selectedTodo.title);
@@ -26,7 +26,11 @@ const SelectedTodo = () => {
     }
   }, [selectedTodo]);
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (selectedTodo) {
       try {
         await deleteTodoMutation.mutateAsync(selectedTodo.id);
@@ -39,11 +43,25 @@ const SelectedTodo = () => {
           sticky: false,
           closable: true,
         });
+        setShowDeleteConfirm(false);
         closeModal();
       } catch (error) {
         console.error("Failed to delete todo:", error);
+        toastRef.current?.show({
+          severity: "error",
+          summary: "Delete Failed",
+          detail: "Failed to delete todo. Please try again.",
+          life: 3000,
+          sticky: false,
+          closable: true,
+        });
+        setShowDeleteConfirm(false);
       }
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   const handleToggleComplete = async () => {
@@ -118,7 +136,7 @@ const SelectedTodo = () => {
       }
     } else {
       setIsEditingTitle(false);
-      setEditTitle(originalTitle); // Reset to original if no changes
+      setEditTitle(originalTitle);
     }
   };
 
@@ -142,6 +160,69 @@ const SelectedTodo = () => {
   return (
     <>
       <CustomToast ref={toastRef} />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        visible={showDeleteConfirm}
+        onHide={handleDeleteCancel}
+        modal
+        className="w-80 md:w-96"
+        unstyled
+        pt={{
+          header: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 rounded-t-lg text-white flex justify-between p-4",
+          },
+          content: {
+            className:
+              "bg-white/10 backdrop-blur-lg border border-white/20 rounded-b-lg text-white p-6",
+          },
+        }}
+        header="Confirm Delete"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+              <span className="text-red-400 text-xl">⚠️</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Delete Todo</h3>
+              <p className="text-white/70 text-sm">
+                This action cannot be undone
+              </p>
+            </div>
+          </div>
+
+          <p className="text-white/80 mb-6">
+            Are you sure you want to delete &quot;{selectedTodo?.title}&quot;?
+            This will permanently remove the todo from your list.
+          </p>
+
+          <div className="flex gap-3 justify-end">
+            <Button
+              onClick={handleDeleteCancel}
+              disabled={deleteTodoMutation.isPending}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-all duration-200 bg-gray-500/20 hover:bg-gray-500/30 border border-gray-500/30 text-gray-400 disabled:bg-gray-500/10 disabled:text-gray-400/50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              disabled={deleteTodoMutation.isPending}
+              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-all duration-200 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 disabled:bg-red-500/10 disabled:text-red-400/50 ${
+                deleteTodoMutation.isPending
+                  ? "cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
+            >
+              {deleteTodoMutation.isPending && <LoadingSpinner />}
+              {deleteTodoMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Main Todo Details Dialog */}
       <Dialog
         modal
         visible={isModalOpen}
@@ -249,7 +330,12 @@ const SelectedTodo = () => {
                   : "Mark as Complete"}
               </Button>
               <Button
-                onClick={handleDelete}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Delete button clicked");
+                  handleDeleteClick();
+                }}
                 disabled={deleteTodoMutation.isPending}
                 className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-all duration-200 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 disabled:bg-red-500/10 disabled:text-red-400/50 ${
                   deleteTodoMutation.isPending
@@ -257,8 +343,7 @@ const SelectedTodo = () => {
                     : "cursor-pointer"
                 }`}
               >
-                {deleteTodoMutation.isPending && <LoadingSpinner />}
-                {deleteTodoMutation.isPending ? "Deleting..." : "Delete"}
+                Delete
               </Button>
             </div>
           </div>
