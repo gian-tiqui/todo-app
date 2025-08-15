@@ -333,7 +333,6 @@ const SelectedTodo = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log("Delete button clicked");
                   handleDeleteClick();
                 }}
                 disabled={deleteTodoMutation.isPending}
