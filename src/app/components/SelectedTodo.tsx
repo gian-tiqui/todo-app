@@ -23,8 +23,18 @@ const SelectedTodo = () => {
     if (selectedTodo) {
       setEditTitle(selectedTodo.title);
       setOriginalTitle(selectedTodo.title);
+      // Reset editing state when a new todo is selected
+      setIsEditingTitle(false);
     }
   }, [selectedTodo]);
+
+  // Reset editing state when modal is closed
+  useEffect(() => {
+    if (!isModalOpen) {
+      setIsEditingTitle(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [isModalOpen]);
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -153,6 +163,13 @@ const SelectedTodo = () => {
     }
   };
 
+  const handleModalClose = () => {
+    // Reset all editing states before closing
+    setIsEditingTitle(false);
+    setShowDeleteConfirm(false);
+    closeModal();
+  };
+
   const LoadingSpinner = () => (
     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
   );
@@ -226,7 +243,7 @@ const SelectedTodo = () => {
       <Dialog
         modal
         visible={isModalOpen}
-        onHide={() => closeModal()}
+        onHide={handleModalClose}
         className="w-80 md:w-[500px]"
         unstyled
         pt={{
