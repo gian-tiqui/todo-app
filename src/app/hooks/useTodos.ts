@@ -30,7 +30,12 @@ export const useCreateTodo = (
   return useMutation({
     mutationFn: async (data: CreateTodoData): Promise<Todo> => {
       const response = await apiClient.post<Todo>("/", data);
-      return response.data;
+      const responseData = response.data;
+
+      return {
+        ...responseData,
+        id: Date.now() + Math.random(),
+      };
     },
     onSuccess: (newTodo) => {
       queryClient.setQueryData<Todo[]>(

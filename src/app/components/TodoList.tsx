@@ -47,11 +47,6 @@ const TodoList = () => {
     isError: isErrorTodos,
   } = useTodos(query.start, query.limit, query.search);
 
-  // Debug: Log the todos data to see what's being returned
-  console.log("Todos data:", todos);
-  console.log("Type of todos:", typeof todos);
-  console.log("Is todos an array:", Array.isArray(todos));
-
   if (isLoadingTodos)
     return (
       <div className="min-h-screen flex items-center justify-center">

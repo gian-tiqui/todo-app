@@ -138,7 +138,7 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
                   id="title"
                   placeholder="Enter todo title..."
                   unstyled
-                  className={`w-full bg-white/10 border border-white/20  rounded-lg text-white placeholder-white/90 h-12 px-2  focus:border-blue-400 focus:bg-white/20 ${
+                  className={`w-full bg-white/10 border border-white/20 rounded-lg text-white placeholder-text-white h-12 px-2  focus:border-blue-400 focus:bg-white/20 ${
                     errors.title ? "border-red-400" : ""
                   }`}
                   disabled={createTodoMutation.isPending}
