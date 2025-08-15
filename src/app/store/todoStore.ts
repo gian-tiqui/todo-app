@@ -9,9 +9,11 @@ interface TodoState {
   closeModal: () => void;
   accumulatedTodos: Todo[];
   setAccumulatedTodos: (todo: Todo[]) => void;
+  updateTodoInAccumulated: (updatedTodo: Todo) => void;
+  removeTodoFromAccumulated: (todoId: number) => void;
 }
 
-export const useTodoStore = create<TodoState>((set) => ({
+export const useTodoStore = create<TodoState>((set, get) => ({
   selectedTodo: null,
   isModalOpen: false,
   setSelectedTodo: (todo) => set({ selectedTodo: todo }),
@@ -19,4 +21,16 @@ export const useTodoStore = create<TodoState>((set) => ({
   closeModal: () => set({ selectedTodo: null, isModalOpen: false }),
   accumulatedTodos: [],
   setAccumulatedTodos: (todos: Todo[]) => set({ accumulatedTodos: todos }),
+  updateTodoInAccumulated: (updatedTodo: Todo) => {
+    const { accumulatedTodos } = get();
+    const updatedTodos = accumulatedTodos.map((todo) =>
+      todo.id === updatedTodo.id ? updatedTodo : todo
+    );
+    set({ accumulatedTodos: updatedTodos });
+  },
+  removeTodoFromAccumulated: (todoId: number) => {
+    const { accumulatedTodos } = get();
+    const filteredTodos = accumulatedTodos.filter((todo) => todo.id !== todoId);
+    set({ accumulatedTodos: filteredTodos });
+  },
 }));

@@ -9,8 +9,14 @@ import CustomToast from "./CustomToast";
 
 const SelectedTodo = () => {
   const toastRef = useRef<Toast>(null);
-  const { isModalOpen, selectedTodo, closeModal, setSelectedTodo } =
-    useTodoStore();
+  const {
+    isModalOpen,
+    selectedTodo,
+    closeModal,
+    setSelectedTodo,
+    updateTodoInAccumulated,
+    removeTodoFromAccumulated,
+  } = useTodoStore();
   const deleteTodoMutation = useDeleteTodo();
   const updateTodoMutation = useUpdateTodo();
 
@@ -42,6 +48,9 @@ const SelectedTodo = () => {
     if (selectedTodo) {
       try {
         await deleteTodoMutation.mutateAsync(selectedTodo.id);
+
+        // Remove from accumulated todos
+        removeTodoFromAccumulated(selectedTodo.id);
 
         toastRef.current?.show({
           severity: "success",
@@ -96,7 +105,9 @@ const SelectedTodo = () => {
           closable: true,
         });
 
+        // Update both selected todo and accumulated todos
         setSelectedTodo(updated);
+        updateTodoInAccumulated(updated);
       } catch (error) {
         console.error("Failed to update todo:", error);
       }
@@ -128,7 +139,9 @@ const SelectedTodo = () => {
           closable: true,
         });
 
+        // Update both selected todo and accumulated todos
         setSelectedTodo(updated);
+        updateTodoInAccumulated(updated);
         setOriginalTitle(editTitle.trim());
         setIsEditingTitle(false);
       } catch (error) {
