@@ -7,6 +7,7 @@ import { Checkbox } from "primereact/checkbox";
 import { useForm, Controller } from "react-hook-form";
 import { useCreateTodo } from "../hooks/useTodos";
 import { Toast } from "primereact/toast";
+import DOMPurify from "dompurify";
 import CustomToast from "./CustomToast";
 
 interface CreateTodoFormData {
@@ -38,9 +39,25 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
     mode: "onChange",
   });
 
+  // Sanitizer function
+  const sanitizeInput = (input: string) => {
+    const cleaned = DOMPurify.sanitize(input.trim());
+    const sqlKeywords =
+      /\b(SELECT|UPDATE|DELETE|INSERT|DROP|UNION|ALTER|CREATE|TRUNCATE|EXEC|--|;)\b/i;
+    if (sqlKeywords.test(cleaned)) {
+      throw new Error("Invalid input: contains disallowed keywords.");
+    }
+    return cleaned;
+  };
+
   const onSubmit = async (data: CreateTodoFormData) => {
     try {
-      await createTodoMutation.mutateAsync(data);
+      const purifiedTodo = {
+        ...data,
+        title: sanitizeInput(data.title),
+      };
+
+      await createTodoMutation.mutateAsync(purifiedTodo);
       reset();
       toastRef.current?.show({
         severity: "success",
@@ -52,7 +69,19 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
       });
 
       setVisible(false);
-    } catch (error) {
+    } catch (error: unknown) {
+      let message = "Your input contains invalid patterns.";
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      toastRef.current?.show({
+        severity: "error",
+        summary: "Invalid Input",
+        detail: message,
+        life: 3000,
+        sticky: false,
+        closable: true,
+      });
       console.error("Failed to create todo:", error);
     }
   };
@@ -131,6 +160,24 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
                   value: 100,
                   message: "Title must not exceed 100 characters",
                 },
+                validate: (value) => {
+                  try {
+                    sanitizeInput(value);
+                    return true;
+                  } catch (err: unknown) {
+                    let message = "Your input contains invalid patterns.";
+                    if (err instanceof Error) {
+                      message = err.message;
+                    }
+                    toastRef.current?.show({
+                      severity: "error",
+                      summary: "Invalid Input",
+                      detail: message,
+                      life: 3000,
+                    });
+                    return message;
+                  }
+                },
               }}
               render={({ field }) => (
                 <InputText
@@ -138,7 +185,7 @@ const CreateTodo: React.FC<CreateTodoProps> = ({ visible, setVisible }) => {
                   id="title"
                   placeholder="Enter todo title..."
                   unstyled
-                  className={`w-full bg-white/10 border border-white/20 rounded-lg text-white placeholder-text-white h-12 px-2  focus:border-blue-400 focus:bg-white/20 ${
+                  className={`w-full bg-white/10 border border-white/20 rounded-lg text-white placeholder-text-white h-12 px-2 focus:border-blue-400 focus:bg-white/20 ${
                     errors.title ? "border-red-400" : ""
                   }`}
                   disabled={createTodoMutation.isPending}
