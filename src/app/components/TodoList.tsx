@@ -47,6 +47,11 @@ const TodoList = () => {
     isError: isErrorTodos,
   } = useTodos(query.start, query.limit, query.search);
 
+  // Debug: Log the todos data to see what's being returned
+  console.log("Todos data:", todos);
+  console.log("Type of todos:", typeof todos);
+  console.log("Is todos an array:", Array.isArray(todos));
+
   if (isLoadingTodos)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -68,6 +73,9 @@ const TodoList = () => {
         </div>
       </div>
     );
+
+  // Ensure todos is always an array before mapping
+  const todoList = Array.isArray(todos) ? todos : [];
 
   return (
     <div className="min-h-screen p-4">
@@ -98,11 +106,11 @@ const TodoList = () => {
 
         {/* Todo List */}
         <div className="space-y-3 mb-8">
-          {todos && todos.length > 0 ? (
-            todos.map((todo: Todo) => <TodoItem todo={todo} key={todo.id} />)
+          {todoList.length > 0 ? (
+            todoList.map((todo: Todo) => <TodoItem todo={todo} key={todo.id} />)
           ) : (
             <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg p-8 text-center text-white/70">
-              No todos found
+              {todos === undefined ? "Loading..." : "No todos found"}
             </div>
           )}
         </div>
@@ -121,7 +129,7 @@ const TodoList = () => {
           </span>
           <Button
             onClick={handleNextClicked}
-            disabled={!todos || todos.length < query.limit}
+            disabled={!todoList || todoList.length < query.limit}
             className="bg-white/10 hover:bg-white/20 border border-white/20 text-white disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg"
           >
             Next →

@@ -1,9 +1,10 @@
 import { Dialog } from "primereact/dialog";
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useTodoStore } from "../store/todoStore";
 import { useDeleteTodo, useUpdateTodo } from "../hooks/useTodos";
 import { Button } from "primereact/button";
 import { Toast } from "primereact/toast";
+import { InputText } from "primereact/inputtext";
 import CustomToast from "./CustomToast";
 
 const SelectedTodo = () => {
@@ -13,6 +14,18 @@ const SelectedTodo = () => {
   const deleteTodoMutation = useDeleteTodo();
   const updateTodoMutation = useUpdateTodo();
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [originalTitle, setOriginalTitle] = useState("");
+
+  // Initialize edit title when selectedTodo changes
+  useEffect(() => {
+    if (selectedTodo) {
+      setEditTitle(selectedTodo.title);
+      setOriginalTitle(selectedTodo.title);
+    }
+  }, [selectedTodo]);
+
   const handleDelete = async () => {
     if (selectedTodo) {
       try {
@@ -21,7 +34,7 @@ const SelectedTodo = () => {
         toastRef.current?.show({
           severity: "success",
           summary: "Todo Deleted",
-          detail: "Your new task was deleted successfully.",
+          detail: "Your task was deleted successfully.",
           life: 3000,
           sticky: false,
           closable: true,
@@ -38,7 +51,11 @@ const SelectedTodo = () => {
       try {
         const updated = await updateTodoMutation.mutateAsync({
           id: selectedTodo.id,
-          data: { completed: !selectedTodo.completed },
+          data: {
+            completed: !selectedTodo.completed,
+            title: selectedTodo.title,
+            userId: selectedTodo.userId,
+          },
         });
 
         const isDone = updated.completed;
@@ -59,6 +76,68 @@ const SelectedTodo = () => {
       }
     }
   };
+
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = async () => {
+    if (selectedTodo && editTitle.trim() && editTitle !== originalTitle) {
+      try {
+        const updated = await updateTodoMutation.mutateAsync({
+          id: selectedTodo.id,
+          data: {
+            title: editTitle.trim(),
+            completed: selectedTodo.completed,
+            userId: selectedTodo.userId,
+          },
+        });
+
+        toastRef.current?.show({
+          severity: "success",
+          summary: "Title Updated",
+          detail: "Todo title has been updated successfully.",
+          life: 3000,
+          sticky: false,
+          closable: true,
+        });
+
+        setSelectedTodo(updated);
+        setOriginalTitle(editTitle.trim());
+        setIsEditingTitle(false);
+      } catch (error) {
+        console.error("Failed to update todo title:", error);
+        toastRef.current?.show({
+          severity: "error",
+          summary: "Update Failed",
+          detail: "Failed to update todo title. Please try again.",
+          life: 3000,
+          sticky: false,
+          closable: true,
+        });
+      }
+    } else {
+      setIsEditingTitle(false);
+      setEditTitle(originalTitle); // Reset to original if no changes
+    }
+  };
+
+  const handleTitleCancel = () => {
+    setEditTitle(originalTitle);
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleTitleSave();
+    } else if (e.key === "Escape") {
+      handleTitleCancel();
+    }
+  };
+
+  const LoadingSpinner = () => (
+    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+  );
 
   return (
     <>
@@ -89,9 +168,45 @@ const SelectedTodo = () => {
                 <label className="block text-sm font-semibold text-white/70 mb-2">
                   Title
                 </label>
-                <div className="bg-white/10 border border-white/20 rounded-lg p-3 text-white">
-                  {selectedTodo.title}
-                </div>
+                {isEditingTitle ? (
+                  <div className="flex gap-2">
+                    <InputText
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={handleTitleKeyDown}
+                      className="flex-1 bg-white/10 border border-white/20 rounded-lg p-3 text-white placeholder:text-white/50 focus:border-white/40 focus:ring-0 outline-none"
+                      placeholder="Enter todo title..."
+                      autoFocus
+                      disabled={updateTodoMutation.isPending}
+                    />
+                    <Button
+                      onClick={handleTitleSave}
+                      disabled={
+                        updateTodoMutation.isPending || !editTitle.trim()
+                      }
+                      className="flex items-center justify-center px-3 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 disabled:bg-green-500/10 disabled:text-green-400/50 disabled:cursor-not-allowed"
+                    >
+                      {updateTodoMutation.isPending ? <LoadingSpinner /> : "✓"}
+                    </Button>
+                    <Button
+                      onClick={handleTitleCancel}
+                      disabled={updateTodoMutation.isPending}
+                      className="flex items-center justify-center px-3 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-500/20 hover:bg-gray-500/30 border border-gray-500/30 text-gray-400 disabled:bg-gray-500/10 disabled:text-gray-400/50 disabled:cursor-not-allowed"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="bg-white/10 border border-white/20 rounded-lg p-3 text-white cursor-pointer hover:bg-white/15 transition-colors duration-200 group flex items-center justify-between"
+                    onClick={handleTitleEdit}
+                  >
+                    <span>{selectedTodo.title}</span>
+                    <span className="text-white/40 group-hover:text-white/60 text-sm">
+                      ✏️ Click to edit
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-white/70 mb-2">
@@ -114,21 +229,35 @@ const SelectedTodo = () => {
               <Button
                 onClick={handleToggleComplete}
                 disabled={updateTodoMutation.isPending}
-                className={`flex-1 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-all duration-200 ${
                   selectedTodo.completed
-                    ? "bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400"
-                    : "bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400"
+                    ? "bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 disabled:bg-yellow-500/10 disabled:text-yellow-400/50"
+                    : "bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 disabled:bg-green-500/10 disabled:text-green-400/50"
+                } ${
+                  updateTodoMutation.isPending
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
                 }`}
               >
-                {selectedTodo.completed
+                {updateTodoMutation.isPending && <LoadingSpinner />}
+                {updateTodoMutation.isPending
+                  ? selectedTodo.completed
+                    ? "Setting to Pending..."
+                    : "Completing..."
+                  : selectedTodo.completed
                   ? "Mark as Pending"
                   : "Mark as Complete"}
               </Button>
               <Button
                 onClick={handleDelete}
                 disabled={deleteTodoMutation.isPending}
-                className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400"
+                className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-all duration-200 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 disabled:bg-red-500/10 disabled:text-red-400/50 ${
+                  deleteTodoMutation.isPending
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
               >
+                {deleteTodoMutation.isPending && <LoadingSpinner />}
                 {deleteTodoMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </div>
